@@ -17,6 +17,7 @@ dev = [
     "ruff==0.17.3",
     "types-pyyaml==6.0.12.20261030",
     "pre-commit==4.7.0",
+    "markdown-it-py==4.0.0",
 ]
 security-tests = [
     "httpx==0.28.1",

@@ -32,14 +32,24 @@ if [ "$TARGET" = zap ] || [ "$TARGET" = all ]; then
 fi
 
 if [ "$TARGET" = nuclei ] || [ "$TARGET" = all ]; then
-  log "Nuclei (misconfiguration, exposure, tech; rate limited)"
-  docker run --rm --network "$NET" \
-    -v "$(abs "$REPORTS"):/out" -v "$(abs "$CACHE"):/root/.config/nuclei" \
-    "$NUCLEI_IMAGE" \
-    -target http://crapi-web/ -target http://crapi-web/identity/api/ -target http://crapi-web/workshop/api/ \
-    -tags misconfig,exposure,tech,default-login \
-    -header "Authorization: Bearer $JWT" \
-    -rate-limit 20 -timeout 10 -retries 1 -no-interactsh -system-resolvers \
-    -jsonl -output /out/nuclei.jsonl -stats -silent || echo "nuclei: exit $?" >&2
+  # Two passes into the same file: the tag selection, and one template that must match on any plain-HTTP
+  # host. The second pass is a self-check — an empty result from the first pass means "nothing matched",
+  # not "the scanner never reached the target", which is a mistake this project already made once.
+  # -system-resolvers is required: nuclei's own resolvers cannot see Docker's internal DNS.
+  : > "$REPORTS/nuclei.jsonl"
+  for pass in "-tags misconfig,exposure,tech,default-login" "-id http-missing-security-headers"; do
+    log "Nuclei: $pass"
+    # shellcheck disable=SC2086
+    docker run --rm --network "$NET" \
+      -v "$(abs "$REPORTS"):/out" -v "$(abs "$CACHE"):/root/.config/nuclei" \
+      "$NUCLEI_IMAGE" \
+      -target http://crapi-web/ -target http://crapi-web/identity/api/ -target http://crapi-web/workshop/api/ \
+      $pass \
+      -header "Authorization: Bearer $JWT" \
+      -rate-limit 20 -timeout 10 -retries 1 -no-interactsh -system-resolvers \
+      -jsonl -output /out/nuclei-pass.jsonl -stats -silent || echo "nuclei: exit $?" >&2
+    cat "$REPORTS/nuclei-pass.jsonl" >> "$REPORTS/nuclei.jsonl" 2>/dev/null
+    rm -f "$REPORTS/nuclei-pass.jsonl"
+  done
   printf 'nuclei findings: %s\n' "$(wc -l < "$REPORTS/nuclei.jsonl" 2>/dev/null || echo 0)"
 fi

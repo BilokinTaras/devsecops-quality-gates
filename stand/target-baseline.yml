@@ -1,0 +1,10 @@
+# Baseline for the DAST gate (ZAP + Nuclei against the local crAPI stand).
+#
+# It is empty on purpose. The scan of 2026-11-01 produced no High or Critical alert — 11 Medium, 16 Low and
+# 5 informational, listed in docs/scanner-coverage.md — and the gate blocks only on new findings at High or
+# above (ADR-003). Nothing therefore needs to be accepted, and nothing is hidden.
+#
+# An entry is added only when a High or Critical alert is triaged as acceptable, and then it must carry a
+# reason, an owner and an expiry date; the gate rejects placeholders and stops honouring expired entries.
+version: 1
+entries: []
