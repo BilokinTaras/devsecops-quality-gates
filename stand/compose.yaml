@@ -1,0 +1,227 @@
+# OWASP crAPI — an intentionally vulnerable API, for local security testing only.
+# Source: https://github.com/OWASP/crAPI, tag v1.1.6, deploy/docker/docker-compose.yml (Apache-2.0).
+# Changes from upstream (see docs/adr/ADR-002-crapi-stand.md):
+#   - images pinned by digest (the v1.1.6 release compose uses the moving `latest` tag);
+#   - crapi-chatbot and chromadb removed: they need an external OpenAI API key;
+#   - fixed container_name removed so Compose project `qa-crapi` owns every name;
+#   - only crapi-web (8888) and MailHog UI (8025) are published, on 127.0.0.1 only;
+#   - TLS between services disabled (upstream compose default; the upstream .env enables it);
+#   - local `canary` HTTP service added as the only allowed SSRF target.
+name: qa-crapi
+
+x-crapi-db: &crapi-db
+  DB_NAME: crapi
+  DB_USER: admin
+  DB_PASSWORD: crapisecretpassword # upstream demo value, local stand only
+  DB_HOST: postgresdb
+  DB_PORT: "5432"
+  MONGO_DB_HOST: mongodb
+  MONGO_DB_PORT: "27017"
+  MONGO_DB_USER: admin
+  MONGO_DB_PASSWORD: crapisecretpassword
+  MONGO_DB_NAME: crapi
+
+services:
+  crapi-identity:
+    image: crapi/crapi-identity@sha256:5d1db5b3ba8e02bc68711ec6fc4e35ed7cd8b87e63785ece9e7ff5b5e36c5260
+    volumes:
+      - ./keys:/app/keys:ro
+    environment:
+      <<: *crapi-db
+      LOG_LEVEL: INFO
+      SERVER_PORT: "8080"
+      ENABLE_SHELL_INJECTION: "false"
+      JWT_SECRET: crapi
+      MAILHOG_HOST: mailhog
+      MAILHOG_PORT: "1025"
+      MAILHOG_DOMAIN: example.com
+      SMTP_HOST: smtp.example.com
+      SMTP_PORT: "587"
+      SMTP_EMAIL: user@example.com
+      SMTP_PASS: xxxxxxxxxxxxxx
+      SMTP_FROM: no-reply@example.com
+      SMTP_AUTH: "true"
+      SMTP_STARTTLS: "true"
+      JWT_EXPIRATION: "604800000"
+      ENABLE_LOG4J: "false"
+      API_GATEWAY_URL: https://api.mypremiumdealership.com
+      TLS_ENABLED: "false"
+    depends_on:
+      postgresdb: { condition: service_healthy }
+      mongodb: { condition: service_healthy }
+      mailhog: { condition: service_healthy }
+    healthcheck:
+      test: /app/health.sh
+      interval: 10s
+      timeout: 15s
+      retries: 30
+    deploy:
+      resources:
+        limits: { cpus: "0.8", memory: 384M }
+
+  crapi-community:
+    image: crapi/crapi-community@sha256:8ba0c7eda86ae065a673f1fa554d0109a24f25c5a8d65097ae024e5ee715c54e
+    environment:
+      <<: *crapi-db
+      LOG_LEVEL: INFO
+      IDENTITY_SERVICE: crapi-identity:8080
+      SERVER_PORT: "8087"
+      TLS_ENABLED: "false"
+    depends_on:
+      postgresdb: { condition: service_healthy }
+      mongodb: { condition: service_healthy }
+      crapi-identity: { condition: service_healthy }
+    healthcheck:
+      test: /app/health.sh
+      interval: 10s
+      timeout: 15s
+      retries: 30
+    deploy:
+      resources:
+        limits: { cpus: "0.3", memory: 192M }
+
+  crapi-workshop:
+    image: crapi/crapi-workshop@sha256:d4d2d94d35a31e211b04d5a771881f5ae13e358e8fa0804463ae3bace05dd815
+    environment:
+      <<: *crapi-db
+      LOG_LEVEL: INFO
+      IDENTITY_SERVICE: crapi-identity:8080
+      SERVER_PORT: "8000"
+      SECRET_KEY: crapi
+      API_GATEWAY_URL: https://api.mypremiumdealership.com
+      TLS_ENABLED: "false"
+      FILES_LIMIT: "1000"
+    depends_on:
+      postgresdb: { condition: service_healthy }
+      mongodb: { condition: service_healthy }
+      crapi-identity: { condition: service_healthy }
+      crapi-community: { condition: service_healthy }
+    healthcheck:
+      test: /app/health.sh
+      interval: 10s
+      timeout: 15s
+      retries: 30
+    deploy:
+      resources:
+        limits: { cpus: "0.3", memory: 128M }
+
+  crapi-web:
+    image: crapi/crapi-web@sha256:b27d246c646bd33898e7d1d2095b6e7576c0993a7b81a73aa7386929493d7151
+    ports:
+      - "127.0.0.1:${CRAPI_WEB_PORT:-8888}:80"
+    environment:
+      COMMUNITY_SERVICE: crapi-community:8087
+      IDENTITY_SERVICE: crapi-identity:8080
+      WORKSHOP_SERVICE: crapi-workshop:8000
+      # The chatbot is not deployed (needs an OpenAI key). nginx still resolves this
+      # upstream at start-up, so the canary answers under that name; see ADR-002.
+      CHATBOT_SERVICE: crapi-chatbot:5002
+      MAILHOG_WEB_SERVICE: mailhog:8025
+      TLS_ENABLED: "false"
+    depends_on:
+      crapi-community: { condition: service_healthy }
+      crapi-identity: { condition: service_healthy }
+      crapi-workshop: { condition: service_healthy }
+      canary: { condition: service_healthy }
+    healthcheck:
+      test: curl -fsS 0.0.0.0:80/health
+      interval: 10s
+      timeout: 15s
+      retries: 30
+    deploy:
+      resources:
+        limits: { cpus: "0.3", memory: 128M }
+
+  postgresdb:
+    image: postgres@sha256:0472f5295d05c211cc42b3daa5e84a128e390c5267b60ced9fe044bcf4edfdb8 # postgres:14
+    command: ["postgres", "-c", "max_connections=500"]
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: crapisecretpassword
+      POSTGRES_DB: crapi
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d crapi"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    volumes:
+      - postgresql-data:/var/lib/postgresql/data/
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 256M }
+
+  mongodb:
+    image: mongo@sha256:4be76f674fc4b27859816811b8baa3c51830eb1dbf4ca81a51e26b79edd662ef # mongo:4.4
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: crapisecretpassword
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongo mongodb:27017/test --quiet
+      interval: 5s
+      timeout: 15s
+      retries: 30
+      start_period: 20s
+    volumes:
+      - mongodb-data:/data/db
+    deploy:
+      resources:
+        limits: { cpus: "0.3", memory: 256M }
+
+  mailhog:
+    user: root
+    image: crapi/mailhog@sha256:015c23f79d40c9dc1800cd0a458503b89aeda3b585a12c37d53829d6c7d61fdd
+    environment:
+      MH_MONGO_URI: admin:crapisecretpassword@mongodb:27017
+      MH_STORAGE: mongodb
+    ports:
+      - "127.0.0.1:${CRAPI_MAILHOG_PORT:-8025}:8025"
+    depends_on:
+      mongodb: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "8025"]
+      interval: 5s
+      timeout: 15s
+      retries: 30
+    deploy:
+      resources:
+        limits: { cpus: "0.3", memory: 128M }
+
+  api.mypremiumdealership.com:
+    image: crapi/gateway-service@sha256:97dade9daf0e758547b1686e2d3303c8c9b79838167f728a9211f0ee1f4622b0
+    healthcheck:
+      test: bash -c 'echo -n "GET / HTTP/1.1\n\n" > /dev/tcp/127.0.0.1/443'
+      interval: 5s
+      timeout: 15s
+      retries: 30
+      start_period: 15s
+    deploy:
+      resources:
+        limits: { cpus: "0.1", memory: 50M }
+
+  # The only target SSRF tests may point crAPI at. It records every request it
+  # receives so a test can prove the server-side fetch happened, then answers
+  # with a fixed marker. Never published to the host.
+  canary:
+    image: python:3.12.16-alpine3.24
+    command: ["python", "/canary/canary.py"]
+    volumes:
+      - ./canary:/canary:ro
+    networks:
+      default:
+        aliases: [crapi-chatbot]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/__health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    deploy:
+      resources:
+        limits: { cpus: "0.1", memory: 64M }
+
+networks:
+  default:
+    name: qa-crapi-net
+
+volumes:
+  mongodb-data:
+  postgresql-data:

@@ -1,0 +1,14 @@
+# Gitleaks configuration: the built-in rule set plus one demo rule.
+title = "devsecops-quality-gates"
+
+[extend]
+useDefault = true
+
+# Fake token format used ONLY to demonstrate that the secrets gate blocks a merge
+# (branch demo/gate-red). It is deliberately unlike any real provider's token.
+[[rules]]
+id = "qafake-demo-token"
+description = "Fake demo token (QAFAKE_ + 32 upper-case letters or digits)"
+regex = '''\bQAFAKE_[A-Z0-9]{32}\b'''
+keywords = ["qafake_"]
+tags = ["demo"]

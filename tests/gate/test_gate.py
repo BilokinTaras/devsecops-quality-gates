@@ -166,6 +166,12 @@ class TestCli:
         leaks = write("gitleaks.json", GITLEAKS)
         assert main(["-i", f"gitleaks-json:{leaks}", "--fail-on", "critical"]) == EXIT_PASS
 
+    def test_report_only_reports_failure_but_exits_zero(self, tmp_path: Path, write: Any) -> None:
+        trivy = write("trivy.json", TRIVY)
+        out_json = tmp_path / "gate.json"
+        assert main(["-i", f"trivy-json:{trivy}", "--report-only", "--json-out", str(out_json)]) == EXIT_PASS
+        assert json.loads(out_json.read_text(encoding="utf-8"))["status"] == "fail"
+
     def test_usage_errors(self, tmp_path: Path, write: Any) -> None:
         assert main(["-i", f"sarif:{tmp_path / 'missing.sarif'}"]) == EXIT_USAGE
         assert main(["-i", f"sarif:{tmp_path / 'missing.sarif'}", "--allow-missing"]) == EXIT_PASS

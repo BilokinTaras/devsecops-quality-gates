@@ -1,0 +1,6 @@
+# Replaces Semgrep's default ignore list on purpose: test code is scanned too.
+.git/
+.cache/
+.venv/
+reports/
+node_modules/

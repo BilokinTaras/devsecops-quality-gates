@@ -40,6 +40,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--owner", default="security-qa", help="owner for --write-baseline-draft")
     parser.add_argument("--today", type=dt.date.fromisoformat, help="override today's date (tests, audits)")
     parser.add_argument("--allow-missing", action="store_true", help="skip inputs whose file does not exist")
+    parser.add_argument(
+        "--report-only",
+        action="store_true",
+        help="evaluate and write reports but exit 0 (third-party targets the team cannot fix)",
+    )
     return parser
 
 
@@ -83,6 +88,8 @@ def main(argv: list[str] | None = None) -> int:
         args.md_out.parent.mkdir(parents=True, exist_ok=True)
         args.md_out.write_text(summary, encoding="utf-8")
     print(summary)
+    if args.report_only:
+        return EXIT_PASS
     return EXIT_PASS if result.passed else EXIT_FAIL
 
 
