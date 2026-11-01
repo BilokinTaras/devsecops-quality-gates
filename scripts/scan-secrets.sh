@@ -8,7 +8,9 @@
 
 SIBLINGS="shop-sut shop-e2e-playwright shop-api-pytest shop-performance-k6"
 # Every branch, minus the demo branch that deliberately carries a fake token (see docs/gate-demo.md).
-LOG_OPTS=${GITLEAKS_LOG_OPTS:-"--all --not --branches=demo/*"}
+# --exclude applies to the --all that follows it; "--not --branches=demo/*" would instead drop every commit
+# the demo branch contains, which is the whole history.
+LOG_OPTS=${GITLEAKS_LOG_OPTS:-"--exclude=refs/heads/demo/* --all"}
 repos="$ROOT"
 if [ "${SCAN_SIBLINGS:-1}" = "1" ]; then
   for name in $SIBLINGS; do

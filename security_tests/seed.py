@@ -70,6 +70,7 @@ def seed() -> dict[str, Any]:
         dashboard = api.get("/identity/api/v2/user/dashboard").json()
         data["users"][key] = {
             "email": user.email,
+            "phone": user.number,
             "user_id": dashboard["id"],
             "signup": status,
             "vehicle": _ensure_vehicle(api, user),

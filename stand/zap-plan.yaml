@@ -1,0 +1,73 @@
+# ZAP Automation Framework plan for the local crAPI stand.
+# Context is limited to http://crapi-web; nothing else is in scope. Run through scripts/scan-dast.sh.
+env:
+  contexts:
+    - name: crapi
+      urls: [http://crapi-web/]
+      includePaths:
+        - http://crapi-web/identity/api/.*
+        - http://crapi-web/community/api/.*
+        - http://crapi-web/workshop/api/.*
+      excludePaths:
+        # Logging out would invalidate the token used for the whole scan.
+        - http://crapi-web/identity/api/auth/logout.*
+  parameters:
+    failOnError: true
+    progressToStdout: true
+
+jobs:
+  # The session token is created by the seed and passed in as an environment variable.
+  - type: replacer
+    rules:
+      - description: bearer token
+        matchType: req_header
+        matchString: Authorization
+        replacementString: "Bearer ${ZAP_JWT}"
+        tokenProcessing: false
+
+  - type: openapi
+    parameters:
+      apiFile: /zap/wrk/crapi-openapi-spec.json
+      targetUrl: http://crapi-web/
+      context: crapi
+
+  - type: passiveScan-config
+    parameters:
+      maxAlertsPerRule: 10
+      scanOnlyInScope: true
+
+  - type: spider
+    parameters:
+      context: crapi
+      url: http://crapi-web/
+      maxDuration: 2
+      maxDepth: 5
+      maxChildren: 20
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 5
+
+  - type: activeScan
+    parameters:
+      context: crapi
+      policy: API
+      maxRuleDurationInMins: 1
+      maxScanDurationInMins: 12
+      threadPerHost: 4
+
+  - type: report
+    parameters:
+      template: traditional-json
+      reportDir: /zap/wrk/out
+      reportFile: zap-report.json
+  - type: report
+    parameters:
+      template: traditional-html
+      reportDir: /zap/wrk/out
+      reportFile: zap-report.html
+  - type: report
+    parameters:
+      template: sarif-json
+      reportDir: /zap/wrk/out
+      reportFile: zap-report.sarif
