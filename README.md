@@ -80,7 +80,7 @@ it is allowed only against this stand.
 
 ```bash
 uv sync --frozen --all-groups
-make check                 # ruff, mypy --strict, 71 unit tests of the gate and tools (coverage ≥ 90 %)
+make check                 # ruff, mypy --strict, 79 unit tests of the gate and tools (coverage 98 %)
 make stand-up              # crAPI on 127.0.0.1:8888, MailHog on :8025  (~90 s)
 make seed                  # users A and B with vehicles, posts and orders (idempotent)
 make security-tests        # 10 passed, 18 xfailed
