@@ -1,5 +1,6 @@
 # ZAP Automation Framework plan for the local crAPI stand.
-# Context is limited to http://crapi-web; nothing else is in scope. Run through scripts/scan-dast.sh.
+# Context is limited to http://crapi-web; nothing else is in scope. Run through scripts/scan-dast.sh,
+# which mounts this directory read-only at /zap/plan and the report directory at /zap/out.
 env:
   contexts:
     - name: crapi
@@ -27,7 +28,7 @@ jobs:
 
   - type: openapi
     parameters:
-      apiFile: /zap/wrk/crapi-openapi-spec.json
+      apiFile: /zap/plan/crapi-openapi-spec.json
       targetUrl: http://crapi-web/
       context: crapi
 
@@ -59,15 +60,15 @@ jobs:
   - type: report
     parameters:
       template: traditional-json
-      reportDir: /zap/wrk/out
+      reportDir: /zap/out
       reportFile: zap-report.json
   - type: report
     parameters:
       template: traditional-html
-      reportDir: /zap/wrk/out
+      reportDir: /zap/out
       reportFile: zap-report.html
   - type: report
     parameters:
       template: sarif-json
-      reportDir: /zap/wrk/out
+      reportDir: /zap/out
       reportFile: zap-report.sarif

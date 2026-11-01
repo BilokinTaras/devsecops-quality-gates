@@ -22,11 +22,12 @@ print(CrapiClient().login(ALICE))")
 
 if [ "$TARGET" = zap ] || [ "$TARGET" = all ]; then
   log "ZAP Automation Framework (budget: ~20 min)"
-  # /zap/wrk holds the plan, the OpenAPI file and the output directory.
+  # The plan and the OpenAPI file are read-only; reports go to a separate mount, because a writable
+  # directory cannot be mounted inside a read-only one.
   docker run --rm --network "$NET" \
-    -v "$(abs "$ROOT/stand"):/zap/wrk:ro" -v "$(abs "$OUT"):/zap/wrk/out" \
+    -v "$(abs "$ROOT/stand"):/zap/plan:ro" -v "$(abs "$OUT"):/zap/out" \
     -e ZAP_JWT="$JWT" \
-    "$ZAP_IMAGE" zap.sh -cmd -autorun /zap/wrk/zap-plan.yaml || echo "zap: exit $?" >&2
+    "$ZAP_IMAGE" zap.sh -cmd -autorun /zap/plan/zap-plan.yaml || echo "zap: exit $?" >&2
   ls -l "$OUT"
 fi
 
@@ -38,7 +39,7 @@ if [ "$TARGET" = nuclei ] || [ "$TARGET" = all ]; then
     -target http://crapi-web/ -target http://crapi-web/identity/api/ -target http://crapi-web/workshop/api/ \
     -tags misconfig,exposure,tech,default-login \
     -header "Authorization: Bearer $JWT" \
-    -rate-limit 20 -timeout 10 -retries 1 -no-interactsh \
+    -rate-limit 20 -timeout 10 -retries 1 -no-interactsh -system-resolvers \
     -jsonl -output /out/nuclei.jsonl -stats -silent || echo "nuclei: exit $?" >&2
   printf 'nuclei findings: %s\n' "$(wc -l < "$REPORTS/nuclei.jsonl" 2>/dev/null || echo 0)"
 fi
