@@ -8,6 +8,7 @@ import base64
 import hashlib
 import hmac
 import json
+import time
 from typing import Any
 
 # crAPI's identity service ships this value as JWT_SECRET in the release compose; it is public.
@@ -23,7 +24,12 @@ def _part(obj: dict[str, Any]) -> str:
 
 
 def claims(email: str, role: str = "user", ttl_days: int = 7) -> dict[str, Any]:
-    issued = 1793000000
+    """Issued now, so the token under test fails signature verification and never expiry.
+
+    A hard-coded timestamp would silently turn these tests into expiry checks once it passed, and the
+    strict xfails would flip to XPASS for the wrong reason.
+    """
+    issued = int(time.time())
     return {"sub": email, "role": role, "iat": issued, "exp": issued + ttl_days * 86400}
 
 

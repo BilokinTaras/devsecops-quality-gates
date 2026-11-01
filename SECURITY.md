@@ -12,7 +12,9 @@ the scanners or tests at a host you do not own.
 ## Secrets
 
 - No real secret is ever committed. Credentials in `stand/compose.yaml` are crAPI's public demo values;
-  `stand/keys/jwks.json` is crAPI's public demo key set (needed to start the identity service).
+  `stand/keys/jwks.json` is crAPI's published demo key set — it contains a **private** RSA key, which is
+  why the identity service can sign tokens with it. It is safe only because it is upstream's public demo
+  material for a deliberately vulnerable app; it must never be reused anywhere else.
 - The Gitleaks demonstration uses a **fake** token format (`QAFAKE_…`) that cannot be confused with a real
   provider's token. The fake rule lives in `.gitleaks.toml`.
 - Pre-commit runs ruff, mypy and a Gitleaks scan of staged changes.

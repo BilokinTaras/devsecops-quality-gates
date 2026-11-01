@@ -92,12 +92,13 @@ def gate_summary() -> str:
     if not path.exists():
         return "<p>The gate report is produced by <code>make gate</code>.</p>"
     data = json.loads(path.read_text(encoding="utf-8"))
-    counts = data.get("counts", {})
+    totals = data.get("totals", {})
+    by_severity = totals.get("by_severity", {})
+    counted = ", ".join(f"{name} {n}" for name, n in by_severity.items() if n) or "no findings"
     return (
         f"<p>Last run of the blocking gate: <strong>{data.get('status', '?').upper()}</strong>"
-        f" ({data.get('generated_at', '')}). Findings by severity: "
-        + ", ".join(f"{k} {v}" for k, v in counts.items())
-        + ".</p>"
+        f" ({data.get('generated_at', '')}), blocking {totals.get('blocking', 0)} of"
+        f" {totals.get('findings', 0)} findings ({counted}).</p>"
     )
 
 

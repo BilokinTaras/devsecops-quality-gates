@@ -5,11 +5,12 @@ parses them, and that it refuses to build a report when the findings table canno
 import datetime as dt
 import json
 from pathlib import Path
-from typing import Any
 
 import pytest
 
 from tools import report
+from tools.gate.engine import evaluate
+from tools.gate.models import Finding, Severity
 
 FINDINGS_MD = """# Security findings
 
@@ -68,18 +69,39 @@ def test_gate_summary_without_a_report(docs: Path) -> None:
     assert "make gate" in report.gate_summary()
 
 
-def test_gate_summary_reads_the_gate_report(docs: Path) -> None:
+def test_gate_summary_reads_a_real_gate_report(docs: Path) -> None:
+    """The payload comes from the gate itself, so the report cannot drift from the gate's own format."""
     reports = docs / "reports"
     reports.mkdir()
-    payload: dict[str, Any] = {
-        "status": "pass",
-        "generated_at": "2026-11-01T00:00:00+00:00",
-        "counts": {"critical": 0, "high": 0},
-    }
-    (reports / "gate.json").write_text(json.dumps(payload), encoding="utf-8")
+    leak = Finding(
+        tool="gitleaks",
+        rule_id="qafake-demo-token",
+        title="Fake demo token",
+        severity=Severity.HIGH,
+        location="stand/ci/deploy-notify.sh:6",
+        source="reports/gitleaks.json",
+    )
+    result = evaluate([leak], [], Severity.HIGH, dt.date(2026, 11, 1), ["gitleaks-json:reports/x.json"])
+    (reports / "gate.json").write_text(
+        json.dumps(result.to_dict("2026-11-01T00:00:00+00:00")), encoding="utf-8"
+    )
+    summary = report.gate_summary()
+    assert "FAIL" in summary
+    assert "blocking 1 of 1 findings" in summary
+    assert "high 1" in summary
+    assert "medium 0" not in summary  # empty severities are not listed
+
+
+def test_gate_summary_of_a_clean_run(docs: Path) -> None:
+    reports = docs / "reports"
+    reports.mkdir()
+    result = evaluate([], [], Severity.HIGH, dt.date(2026, 11, 1), [])
+    (reports / "gate.json").write_text(
+        json.dumps(result.to_dict("2026-11-01T00:00:00+00:00")), encoding="utf-8"
+    )
     summary = report.gate_summary()
     assert "PASS" in summary
-    assert "critical 0" in summary
+    assert "no findings" in summary
 
 
 def test_section_drops_the_source_heading_and_renders_tables(docs: Path) -> None:

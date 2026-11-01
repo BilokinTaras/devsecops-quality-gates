@@ -1,0 +1,35 @@
+{
+  "status": "pass",
+  "generated_at": "2026-11-01T02:51:56+00:00",
+  "threshold": "high",
+  "inputs": [
+    "gitleaks-json:reports/gitleaks-devsecops-quality-gates.json",
+    "gitleaks-json:reports/gitleaks-shop-api-pytest.json",
+    "gitleaks-json:reports/gitleaks-shop-e2e-playwright.json",
+    "gitleaks-json:reports/gitleaks-shop-performance-k6.json",
+    "gitleaks-json:reports/gitleaks-shop-sut.json",
+    "semgrep-json:reports/semgrep.json",
+    "trivy-json:reports/trivy-repo.json"
+  ],
+  "totals": {
+    "findings": 0,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "info": 0
+    },
+    "by_tool": {},
+    "blocking": 0,
+    "non_blocking": 0,
+    "suppressed": 0,
+    "expired_baseline": 0,
+    "stale_baseline": 0
+  },
+  "blocking": [],
+  "non_blocking": [],
+  "suppressed": [],
+  "expired_baseline": [],
+  "stale_baseline": []
+}

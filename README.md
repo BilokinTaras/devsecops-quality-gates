@@ -191,5 +191,6 @@ the runs whose raw output is in [docs/data/2026-11-01/](docs/data/2026-11-01/).
 
 MIT © 2026 Taras Bilokin — [LICENSE](LICENSE). OWASP crAPI is © OWASP, Apache-2.0, used as published
 container images (v1.1.6) and as source for SAST; `stand/crapi-openapi-spec.json` and `stand/keys/jwks.json`
-come from that release. Built with Gitleaks (MIT), Semgrep (LGPL-2.1), Trivy (Apache-2.0), Syft and Grype
+come from that release; the key set contains crAPI's published **private** demo key, which exists only to
+make the stand start and must never be reused. Built with Gitleaks (MIT), Semgrep (LGPL-2.1), Trivy (Apache-2.0), Syft and Grype
 (Apache-2.0), OWASP ZAP (Apache-2.0), Nuclei (MIT), pytest, httpx and markdown-it-py (MIT).

@@ -9,7 +9,7 @@ findings in [findings.md](findings.md), which were reproduced by hand.
 | Layer | Tool | Findings reported | Of the 15 manual findings, how many | Max severity |
 |---|---|---:|---:|---|
 | SAST | Semgrep 1.183.0, 374 source files | 54 | **2 partially** (`unverified-jwt-decode`, `jwt-go-parse-unverified` point at FINDING-001) | ERROR |
-| DAST | ZAP 2.17.0, API policy, 140 URLs | 9 alert types | **0** | Medium |
+| DAST | ZAP 2.17.0, API policy, 105 endpoints | 9 alert types | **0** | Medium |
 | DAST | Nuclei 3.11.1, 3 546 templates | 24 (all one template, informational) | **0** | Info |
 | Manual + regression tests | — | 15 | 15 | Critical |
 
@@ -19,8 +19,8 @@ missing rate limit. They did find nine classes of issue that the manual tests ne
 ## ZAP
 
 Configuration: `stand/zap-plan.yaml` — context restricted to `http://crapi-web`, the pinned OpenAPI
-specification imported (44 URLs), spider limited to depth 5 (96 URLs), active scan with the `API` policy and
-a 12-minute budget, authenticated by injecting a bearer token through a replacer rule. Reports: HTML, JSON
+specification imported (44 URLs added) and the spider limited to depth 5 (96 URLs found); the report counts
+105 endpoints in the end. Active scan with the `API` policy and a 12-minute budget (it finished in 1 m 54 s), authenticated by injecting a bearer token through a replacer rule. Reports: HTML, JSON
 and SARIF in `reports/zap/`.
 
 | Alert | Risk | Instances |
@@ -34,9 +34,16 @@ and SARIF in `reports/zap/`.
 | Timestamp Disclosure | Low | 2 |
 | Modern Web Application / Authentication Request Identified | Info | 5 |
 
-Worth noticing: **Application Error Disclosure (Low)** is the same Django 500 page that gave away the SQL
-injection of FINDING-003 during manual testing. ZAP saw the symptom and rated it Low; nobody reading a
-"Low: error page" line would have found the injection behind it.
+A caveat the report itself records: **85 % of the responses ZAP saw were 4xx** (7 % 2xx, 4 % 5xx). Generic
+payloads against a strongly typed API are mostly rejected before any logic runs, which is part of why the
+active scan found nothing — and a reason not to read "0 findings" as "nothing to find".
+
+Worth noticing: ZAP did report **Application Error Disclosure (Low)** — the same class of leaked error
+page that gave away the SQL injection during manual testing — but on five *other* endpoints
+(`receive_report`, `shop/orders`, `login-with-token`, `check-otp` v2 and v3), not on `apply_coupon`. So the
+scanner found the symptom class and rated it Low, and never produced it at the one endpoint where it meant
+an injection. Getting there needs a request body the API accepts and a coupon code it recognises; the
+active scanner's generic payloads did not reach that state.
 
 ## Nuclei
 
