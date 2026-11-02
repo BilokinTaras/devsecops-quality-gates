@@ -77,7 +77,7 @@ jobs:
         run: sh scripts/scan-dast.sh
       - name: DAST gate
         if: always() && steps.tests.outcome != 'skipped'
-        run: make gate-target
+        run: make gate-target GATE_TARGET_MISSING=
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
@@ -88,7 +88,6 @@ jobs:
             reports/zap/
             reports/nuclei.jsonl
             reports/gate-target.*
-            reports/gate-images.*
           retention-days: 14
 
       - name: Stand logs on failure
@@ -139,6 +138,9 @@ jobs:
           sh scripts/scan-sast.sh own
           sh scripts/scan-sca.sh repo
           make gate
+
+      - name: Image SCA through the gate (report only)
+        run: make gate-images
 
       # The PDF is printed by Playwright's Chromium; CI installs it in a temporary directory.
       - name: PDF assessment

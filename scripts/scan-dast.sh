@@ -9,6 +9,10 @@ TARGET=${1:-all}
 NET=qa-crapi-net
 OUT="$REPORTS/zap"
 mkdir -p "$OUT"
+# The ZAP image runs as its own user (zap, uid 1000). On Docker Desktop bind mounts are writable by any
+# container user; on a Linux CI runner they keep the host owner, and ZAP fails to write its report with
+# AccessDeniedException. The directory holds only generated reports.
+chmod 777 "$OUT"
 
 docker network inspect "$NET" >/dev/null 2>&1 || {
   echo "scan-dast: $NET is missing — start the stand: make stand-up" >&2

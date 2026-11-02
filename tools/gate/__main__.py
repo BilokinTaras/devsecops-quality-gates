@@ -83,7 +83,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.json_out:
         args.json_out.parent.mkdir(parents=True, exist_ok=True)
         args.json_out.write_text(json.dumps(result.to_dict(generated_at), indent=2), encoding="utf-8")
-    summary = to_markdown(result)
+    summary = to_markdown(result, report_only=args.report_only)
     if args.md_out:
         args.md_out.parent.mkdir(parents=True, exist_ok=True)
         args.md_out.write_text(summary, encoding="utf-8")

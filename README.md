@@ -91,6 +91,7 @@ make scan-static           # Gitleaks, Semgrep, Trivy, Syft, Grype
 make gate                  # blocking gate over our own code
 make scan-dast             # ZAP (~4 min) and Nuclei (~2 min)
 make gate-target           # gate over the DAST results
+make gate-images           # image SCA through the gate, report only (after scan-static)
 make report                # docs/security-assessment-*.pdf
 make stand-down            # stop; stand-reset also drops the volumes
 ```

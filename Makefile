@@ -4,7 +4,7 @@ COMPOSE := docker compose -f stand/compose.yaml -p qa-crapi
 GATE := uv run python -m tools.gate
 
 .PHONY: help install lint format typecheck unit check stand-up stand-down stand-reset stand-status seed \
-	scan-secrets scan-sast scan-sca scan-dast scan-static gate gate-target security-tests report clean
+	scan-secrets scan-sast scan-sca scan-dast scan-static gate gate-target gate-images security-tests report clean
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "} {printf "  %-15s %s\n", $$1, $$2}'
@@ -65,10 +65,17 @@ gate: ## Blocking gate: new High/Critical in own code, secrets or repo config fa
 		-i semgrep-json:reports/semgrep.json -i trivy-json:reports/trivy-repo.json \
 		--json-out reports/gate.json --md-out reports/gate.md
 
-gate-target: ## Target gate: DAST results against the triaged baseline (blocking); image SCA report-only
-	$(GATE) -b stand/target-baseline.yml --allow-missing \
+# Locally one scanner may be run alone, so a missing report is skipped; CI sets GATE_TARGET_MISSING= so a
+# scanner that produced nothing fails the gate instead of passing it on half the input.
+GATE_TARGET_MISSING ?= --allow-missing
+
+gate-target: ## Target gate: DAST results against the triaged baseline (blocking)
+	$(GATE) -b stand/target-baseline.yml $(GATE_TARGET_MISSING) \
 		-i zap-json:reports/zap/zap-report.json -i nuclei-jsonl:reports/nuclei.jsonl \
 		--json-out reports/gate-target.json --md-out reports/gate-target.md
+
+gate-images: ## crAPI image SCA through the gate (report only; needs make scan-sca first)
+	@ls reports/trivy-image-*.json > /dev/null 2>&1 || { echo "no reports/trivy-image-*.json — run make scan-sca" >&2; exit 2; }
 	$(GATE) --report-only $(foreach f,$(wildcard reports/trivy-image-*.json),-i trivy-json:$(f)) \
 		--json-out reports/gate-images.json --md-out reports/gate-images.md > /dev/null
 

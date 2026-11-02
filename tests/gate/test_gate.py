@@ -77,6 +77,12 @@ class TestEvaluate:
         assert "a b" in md
         assert "Expired baseline entries" in md
 
+    def test_markdown_report_only_is_not_a_verdict(self) -> None:
+        result = evaluate([finding("H", Severity.HIGH)], [], Severity.HIGH, TODAY, [])
+        md = to_markdown(result, report_only=True)
+        assert "REPORT ONLY (would fail)" in md
+        assert "❌ FAIL" not in md
+
     def test_markdown_truncates_long_lists(self) -> None:
         many = [finding(f"R{i}", Severity.HIGH, loc=str(i)) for i in range(5)]
         md = to_markdown(evaluate(many, [], Severity.HIGH, TODAY, []), max_rows=2)

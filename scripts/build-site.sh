@@ -49,6 +49,7 @@ EOF
   section "Gate — this repository's code (blocking)" "$REPORTS/gate.md"
   section "Gate — DAST against the stand (blocking)" "$REPORTS/gate-target.md"
   section "crAPI images — Trivy vs Grype (report only)" "$REPORTS/sca-summary.md"
+  section "crAPI images — gate view (report only)" "$REPORTS/gate-images.md"
   printf '<h2>SBOMs (CycloneDX)</h2><ul>%s</ul>\n</body></html>\n' "$sboms"
 } > "$SITE/index.html"
 echo "site: $SITE/index.html"

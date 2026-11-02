@@ -89,8 +89,11 @@ def _md_escape(text: str) -> str:
     return text.replace("|", "\\|").replace("\n", " ")
 
 
-def to_markdown(result: GateResult, max_rows: int = 50) -> str:
+def to_markdown(result: GateResult, max_rows: int = 50, report_only: bool = False) -> str:
     status = "✅ PASS" if result.passed else "❌ FAIL"
+    if report_only:
+        # The verdict is informational: say what the gate would decide without presenting it as a block.
+        status = f"📋 REPORT ONLY (would {'pass' if result.passed else 'fail'})"
     totals = Counter(f.severity for f in result.findings)
     lines = [
         f"## Security quality gate: {status}",
