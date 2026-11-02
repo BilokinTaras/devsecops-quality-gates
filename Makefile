@@ -73,7 +73,7 @@ gate-target: ## Target gate: DAST results against the triaged baseline (blocking
 		--json-out reports/gate-images.json --md-out reports/gate-images.md > /dev/null
 
 security-tests: ## API security regression tests (strict xfail per finding + positive controls)
-	uv run pytest security_tests
+	uv run pytest security_tests --junitxml=reports/security-tests.xml
 
 report: ## Build the PDF security assessment report
 	uv run python -m tools.report

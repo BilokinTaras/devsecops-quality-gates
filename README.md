@@ -22,7 +22,10 @@ accepted risk carry a reason, an owner and an expiry date.
 
 ## Live reports
 
-CI artefacts and GitHub code scanning arrive with publication (see Roadmap). In the repository today:
+**Nightly pipeline on GitHub Pages:** https://bilokintaras.github.io/devsecops-quality-gates/ — both gate
+verdicts, the regression-test result, the ZAP report, the Trivy-vs-Grype comparison, the PDF assessment and the
+SBOMs (published by [`nightly.yml`](.github/workflows/nightly.yml) once it has run). Findings about this
+repository's own code go to GitHub code scanning. In the repository today:
 [security assessment (PDF)](docs/security-assessment-2026-11-01.pdf) ·
 [ZAP report (HTML)](docs/data/2026-11-01/zap-report.html) ·
 [raw scanner output](docs/data/2026-11-01/).
@@ -129,11 +132,20 @@ SSRF) and every request passes a client that refuses any address outside the sta
 
 ## CI/CD
 
-Planned with publication: on pull requests — lint, types, unit tests, Gitleaks on the branch, Semgrep and
-Trivy with SARIF uploaded to GitHub code scanning, then the blocking `gate`; nightly — the stand is started
-in the job, seeded, the regression suite and both DAST scanners run, `gate-target` blocks on new High or
-Critical, and the PDF plus HTML reports are published as artefacts. The red-gate demonstration becomes a
-pull request that stays unmerged as evidence.
+| Workflow | When | What runs |
+|---|---|---|
+| [`pr.yml`](.github/workflows/pr.yml) | every PR and push to `main` | ruff, mypy, the 82 unit tests with the 90 % coverage floor; `actionlint`, `zizmor` and `shellcheck` over the pipeline itself; Gitleaks over the history of the commit under test, Semgrep on our code and Trivy on the repository, all three as SARIF in GitHub code scanning; then the **blocking gate** |
+| [`nightly.yml`](.github/workflows/nightly.yml) | daily 02:11 UTC, manual | in parallel: SCA and SBOMs of the six crAPI images plus Semgrep on crAPI's source; and crAPI on `127.0.0.1` in the runner → seed → the 28 regression tests → ZAP and Nuclei → the DAST gate. Then both gates, the PDF and the Pages site |
+
+The stand-dependent work stays in one job because the stand exists only there; everything else runs beside it,
+inside a 45-minute budget. The same rules of engagement apply in CI as on a laptop: crAPI binds to loopback,
+scanners reach it only through its Docker network, and the SSRF canary is the only allowed target.
+
+**The red gate on GitHub.** The branch [`demo/gate-red`](docs/gate-demo.md) carries a fake `QAFAKE_` token. Opened
+as a pull request, it fails the `pr.yml` gate and stays closed, unmerged, as the evidence that the gate blocks.
+
+Third-party actions are pinned to commit SHAs; `actionlint`, `zizmor` (no medium or high findings) and
+`shellcheck` pass locally.
 
 ## How-to
 
@@ -178,7 +190,8 @@ the runs whose raw output is in [docs/data/2026-11-01/](docs/data/2026-11-01/).
 
 ## Roadmap & known limitations
 
-- CI on GitHub Actions, SARIF upload to code scanning, nightly reports (needs the GitHub repository).
+- The workflows pass their linters locally but have not run on GitHub yet; the demonstration pull request is
+  opened once the repository is published.
 - ZAP's out-of-band (OAST) checks are off by design: they would send traffic to an external service. SSRF
   is verified by the local canary instead.
 - Nuclei runs a fixed tag selection; a weekly full-template run would catch newly published CVEs.

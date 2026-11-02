@@ -1,0 +1,3 @@
+# Follow the shared settings file the scan scripts source (scripts/lib.sh).
+external-sources=true
+source-path=SCRIPTDIR

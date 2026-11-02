@@ -7,6 +7,7 @@
 #            Third-party target: report only, summarised by tools/sca_summary.py.
 # Images are read straight from the registry (no Docker socket is mounted into any tool).
 # Usage: scripts/scan-sca.sh [repo|images|all]   (default: all)
+# shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
 TARGET=${1:-all}
 PLATFORM=${SCAN_PLATFORM:-linux/amd64}

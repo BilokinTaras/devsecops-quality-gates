@@ -4,6 +4,7 @@
 # Usage: scripts/scan-secrets.sh                     # this repo + siblings, every branch except demo/*
 #        SCAN_SIBLINGS=0 scripts/scan-secrets.sh     # this repo only (CI)
 #        GITLEAKS_LOG_OPTS=--all scripts/scan-secrets.sh   # include demo/* (the red-gate demonstration)
+# shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
 
 SIBLINGS="shop-sut shop-e2e-playwright shop-api-pytest shop-performance-k6"
@@ -20,6 +21,8 @@ fi
 
 for repo in $repos; do
   name=$(basename "$(cd "$repo" && pwd)")
+  # LOG_OPTS is several options on purpose ("--exclude=... --all"), so it must be split into words.
+  # shellcheck disable=SC2086
   commits=$(cd "$repo" && git rev-list $LOG_OPTS --count)
   log "gitleaks: $name ($commits commits; git log $LOG_OPTS)"
   for fmt in json sarif; do

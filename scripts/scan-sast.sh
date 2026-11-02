@@ -4,6 +4,7 @@
 #   crapi — crAPI source at the stand's release tag: reports/semgrep-crapi.sarif + .json, a report only
 #           (crAPI is a third-party target; its findings are triaged in docs/findings-static.md).
 # Usage: scripts/scan-sast.sh [own|crapi|all]   (default: all)
+# shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
 TARGET=${1:-all}
 

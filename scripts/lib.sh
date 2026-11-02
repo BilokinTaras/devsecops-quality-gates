@@ -1,4 +1,7 @@
+# shellcheck shell=sh
 # Shared settings for the scan scripts (sourced, not executed).
+# The variables are used by the scripts that source this file, not here.
+# shellcheck disable=SC2034
 # Every tool runs as a container pinned by tag AND multi-arch digest, so the same bytes run on
 # Linux amd64 and Apple Silicon. No tool is installed on the host.
 set -eu

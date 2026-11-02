@@ -1,0 +1,113 @@
+name: PR checks
+
+# Everything that guards this repository's own code: lint and types, the gate's unit tests, the workflows
+# themselves (actionlint, zizmor), secrets in the branch history, SAST and a dependency/config scan. SARIF goes
+# to GitHub code scanning; the blocking gate decides.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: ruff · mypy · unit tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --frozen --all-groups
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy
+      - run: uv run pytest --cov --cov-report=term-missing
+
+  workflows:
+    name: actionlint · zizmor · shellcheck
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -color
+      - run: docker run --rm -v "$PWD:/repo" -w /repo ghcr.io/zizmorcore/zizmor:1.31.1 --offline --min-severity medium .github/
+      - run: docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.11.0 -x scripts/*.sh
+
+  scan:
+    name: secrets · SAST · repo scan · gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --frozen
+
+      # The history of the commit under test — a pull request that adds a secret is caught here. (Locally the
+      # script scans every branch except demo/*; a CI clone has its branches under refs/remotes, so HEAD is the
+      # honest scope.)
+      - name: Gitleaks
+        env:
+          SCAN_SIBLINGS: "0"
+          GITLEAKS_LOG_OPTS: HEAD
+        run: sh scripts/scan-secrets.sh
+      - name: Semgrep, own code
+        run: sh scripts/scan-sast.sh own
+      - name: Trivy, this repository
+        run: sh scripts/scan-sca.sh repo
+
+      - name: Upload SARIF — Gitleaks
+        # Code scanning needs write access, which pull requests from forks do not get.
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: reports/gitleaks-devsecops-quality-gates.sarif
+          category: gitleaks
+      - name: Upload SARIF — Semgrep
+        # Code scanning needs write access, which pull requests from forks do not get.
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: reports/semgrep.sarif
+          category: semgrep
+      - name: Upload SARIF — Trivy
+        # Code scanning needs write access, which pull requests from forks do not get.
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: reports/trivy-repo.sarif
+          category: trivy
+
+      - name: Gate
+        run: |
+          make gate
+          cat reports/gate.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: pr-scan-reports
+          path: reports/
+          retention-days: 14

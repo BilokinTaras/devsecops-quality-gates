@@ -3,6 +3,7 @@
 # Both tools run as containers attached to qa-crapi-net and address the stand by container name, so no
 # port is published to the host and no other host can be reached (rules of engagement, guardrail 1).
 # Usage: scripts/scan-dast.sh [zap|nuclei|all]   (default: all)
+# shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
 TARGET=${1:-all}
 NET=qa-crapi-net

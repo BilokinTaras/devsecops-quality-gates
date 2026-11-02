@@ -139,3 +139,13 @@ def test_main_writes_html_and_calls_the_printer(
     assert printed
     assert printed[0][0].name == "security-assessment.html"
     assert "3 findings" in capsys.readouterr().out
+
+
+def test_playwright_package_defaults_to_the_sibling_project(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("PLAYWRIGHT_DIR", raising=False)
+    assert report.playwright_package() == report.ROOT.parent / "shop-e2e-playwright" / "package.json"
+
+
+def test_playwright_package_can_be_pointed_elsewhere(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("PLAYWRIGHT_DIR", str(tmp_path))
+    assert report.playwright_package() == tmp_path / "package.json"

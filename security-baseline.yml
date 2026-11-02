@@ -1,0 +1,8 @@
+# Baseline for the blocking gate over this repository's own code (Gitleaks, Semgrep, Trivy on the repo).
+#
+# It is empty on purpose: the scans of 2026-11-01 found nothing in our own code, and the gate blocks only on new
+# High or Critical findings (ADR-003). An entry is added only when such a finding is triaged as acceptable, and
+# then it needs a reason, an owner and an expiry date — the gate rejects placeholders and stops honouring
+# expired entries. A secret is never baselined: it is removed and rotated.
+version: 1
+entries: []

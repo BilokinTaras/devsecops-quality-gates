@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -158,17 +159,28 @@ def build_html(rows: list[dict[str, str]], today: dt.date) -> str:
     return f"<!doctype html><html><head><meta charset='utf-8'><style>{STYLE}</style></head><body>{''.join(parts)}</body></html>"
 
 
+def playwright_package() -> Path:
+    """package.json of an installed @playwright/test.
+
+    PLAYWRIGHT_DIR names a directory with node_modules/@playwright/test (CI installs one there); locally the
+    sibling e2e project's installation is reused, so nothing extra is downloaded.
+    """
+    custom = os.environ.get("PLAYWRIGHT_DIR")
+    base = Path(custom) if custom else ROOT.parent / "shop-e2e-playwright"
+    return base / "package.json"
+
+
 def to_pdf(html: Path, pdf: Path) -> None:
-    """Prints the HTML with the Chromium that ../shop-e2e-playwright installs."""
+    """Prints the HTML to PDF with Playwright's Chromium."""
     script = f"""
     const {{ createRequire }} = require('node:module');
-    const req = createRequire(String.raw`{ROOT.parent / "shop-e2e-playwright" / "package.json"}`);
+    const req = createRequire({json.dumps(str(playwright_package()))});
     const {{ chromium }} = req('@playwright/test');
     (async () => {{
       const browser = await chromium.launch();
       const page = await browser.newPage();
-      await page.goto('file:///' + String.raw`{html}`.replace(/\\\\/g, '/'));
-      await page.pdf({{ path: String.raw`{pdf}`, format: 'A4', printBackground: true,
+      await page.goto({json.dumps(html.resolve().as_uri())});
+      await page.pdf({{ path: {json.dumps(str(pdf))}, format: 'A4', printBackground: true,
         displayHeaderFooter: true, headerTemplate: '<span></span>',
         footerTemplate: `<div style="font-size:8px;width:100%;text-align:center;color:#666">
           crAPI security assessment · <span class="pageNumber"></span>/<span class="totalPages"></span></div>` }});

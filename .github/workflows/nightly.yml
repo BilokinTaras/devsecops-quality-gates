@@ -1,0 +1,176 @@
+name: Nightly security pipeline
+
+# Independent work runs in parallel; everything that needs the running stand runs in one job.
+#   images  — SCA and SBOM of the crAPI images, crAPI source SAST (no stand needed)
+#   stand   — crAPI on 127.0.0.1 → seed → regression tests → ZAP + Nuclei → DAST gate
+#   report  — both gates, the PDF assessment and the Pages site
+# Budget: 45 minutes. Every scanner is confined to the stand by the rules of engagement (docs/).
+on:
+  schedule:
+    - cron: "11 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+jobs:
+  images:
+    name: SCA · SBOM · crAPI source SAST
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --frozen
+      - name: Trivy, Syft and Grype on the crAPI images
+        run: |
+          sh scripts/scan-sca.sh images
+          uv run python -m tools.sca_summary reports
+      - name: Semgrep on crAPI's source (report only)
+        run: sh scripts/scan-sast.sh crapi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: images-reports
+          path: |
+            reports/trivy-image-*.json
+            reports/grype-*.json
+            reports/sbom-*.cdx.json
+            reports/sca-summary.md
+            reports/semgrep-crapi.*
+          retention-days: 14
+
+  stand:
+    name: stand · regression tests · DAST
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --frozen --all-groups
+
+      - name: crAPI on 127.0.0.1
+        run: make stand-up
+      - name: Seed
+        run: make seed
+      - name: Regression tests (strict xfail per finding + positive controls)
+        id: tests
+        run: make security-tests
+      - name: ZAP and Nuclei
+        if: always() && steps.tests.outcome != 'skipped'
+        run: sh scripts/scan-dast.sh
+      - name: DAST gate
+        if: always() && steps.tests.outcome != 'skipped'
+        run: make gate-target
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: stand-reports
+          path: |
+            reports/security-tests.xml
+            reports/zap/
+            reports/nuclei.jsonl
+            reports/gate-target.*
+            reports/gate-images.*
+          retention-days: 14
+
+      - name: Stand logs on failure
+        if: failure()
+        run: |
+          mkdir -p reports/stand-logs
+          docker compose -f stand/compose.yaml -p qa-crapi ps --all > reports/stand-logs/ps.txt 2>&1 || true
+          docker compose -f stand/compose.yaml -p qa-crapi logs --no-color > reports/stand-logs/all.log 2>&1 || true
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: stand-logs
+          path: reports/stand-logs/
+          retention-days: 14
+
+  report:
+    name: gates · PDF · Pages site
+    needs: [images, stand]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+      - run: uv sync --frozen --all-groups
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: "*-reports"
+          merge-multiple: true
+          path: reports
+
+      - name: Gate over this repository's code
+        env:
+          SCAN_SIBLINGS: "0"
+          GITLEAKS_LOG_OPTS: HEAD
+        run: |
+          sh scripts/scan-secrets.sh
+          sh scripts/scan-sast.sh own
+          sh scripts/scan-sca.sh repo
+          make gate
+
+      # The PDF is printed by Playwright's Chromium; CI installs it in a temporary directory.
+      - name: PDF assessment
+        run: |
+          mkdir -p "$RUNNER_TEMP/pw"
+          (cd "$RUNNER_TEMP/pw" && npm init -y > /dev/null \
+            && npm install --no-audit --no-fund @playwright/test@1.64.1 \
+            && npx playwright install --with-deps chromium)
+          PLAYWRIGHT_DIR="$RUNNER_TEMP/pw" uv run python -m tools.report
+
+      - name: Pages site
+        run: |
+          sh scripts/build-site.sh site
+          {
+            echo "### Nightly security pipeline"
+            cat reports/gate.md 2>/dev/null
+            cat reports/gate-target.md 2>/dev/null
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  publish:
+    name: Publish to Pages
+    needs: report
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
