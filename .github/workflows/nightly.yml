@@ -5,6 +5,8 @@ name: Nightly security pipeline
 #   stand   — crAPI on 127.0.0.1 → seed → regression tests → ZAP + Nuclei → DAST gate
 #   report  — both gates, the PDF assessment and the Pages site
 # Budget: 45 minutes. Every scanner is confined to the stand by the rules of engagement (docs/).
+# A workflow with only schedule or manual triggers is indexed by GitHub from a push that changes this file;
+# the repository's first push did not register it.
 on:
   schedule:
     - cron: "11 2 * * *"
