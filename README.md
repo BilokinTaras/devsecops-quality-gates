@@ -194,3 +194,7 @@ container images (v1.1.6) and as source for SAST; `stand/crapi-openapi-spec.json
 come from that release; the key set contains crAPI's published **private** demo key, which exists only to
 make the stand start and must never be reused. Built with Gitleaks (MIT), Semgrep (LGPL-2.1), Trivy (Apache-2.0), Syft and Grype
 (Apache-2.0), OWASP ZAP (Apache-2.0), Nuclei (MIT), pytest, httpx and markdown-it-py (MIT).
+
+---
+
+Part of a QA portfolio: [shop-sut](https://github.com/BilokinTaras/shop-sut) (the shop under test) · [shop-e2e-playwright](https://github.com/BilokinTaras/shop-e2e-playwright) (UI and API end-to-end) · [shop-api-pytest](https://github.com/BilokinTaras/shop-api-pytest) (API depth) · [shop-performance-k6](https://github.com/BilokinTaras/shop-performance-k6) (performance) · **devsecops-quality-gates** (security pipeline)
