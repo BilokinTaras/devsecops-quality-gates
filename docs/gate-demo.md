@@ -49,8 +49,22 @@ a custom rule is an addition to the default set, not a replacement for it.
 The failing report names the rule, the file, the line and the commit; the value itself is redacted by
 `--redact`, so the report can be published and uploaded to code scanning.
 
+## The same demonstration on GitHub (2026-11-02)
+
+[Pull request #1](https://github.com/BilokinTaras/devsecops-quality-gates/pull/1) opens `demo/gate-red` against
+`main`. Its `PR checks` run:
+
+| Job | Result |
+|---|---|
+| `ruff · mypy · unit tests` | passed |
+| `actionlint · zizmor · shellcheck` | passed |
+| `secrets · SAST · repo scan · gate` | **failed at the Gate step** — 2 leaks, both High: `qafake-demo-token` and `curl-auth-header` on `stand/ci/deploy-notify.sh` |
+
+Everything else passed, so the red comes from the gate alone. The pull request is closed without merging and
+stays as the evidence.
+
 ## Why the finding is not baselined
 
 The baseline accepts a finding only with a reason, an owner and an expiry date. A secret in history is not a
-risk to accept — it is removed and the credential rotated. The demonstration branch is therefore never merged;
-in phase 2 it becomes a pull request that stays open and closed as evidence, linked from the README.
+risk to accept — it is removed and the credential rotated. The demonstration branch is therefore never merged:
+its pull request is closed, unmerged, and linked from the README as evidence.

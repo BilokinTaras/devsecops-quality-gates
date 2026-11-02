@@ -141,8 +141,10 @@ The stand-dependent work stays in one job because the stand exists only there; e
 inside a 45-minute budget. The same rules of engagement apply in CI as on a laptop: crAPI binds to loopback,
 scanners reach it only through its Docker network, and the SSRF canary is the only allowed target.
 
-**The red gate on GitHub.** The branch [`demo/gate-red`](docs/gate-demo.md) carries a fake `QAFAKE_` token. Opened
-as a pull request, it fails the `pr.yml` gate and stays closed, unmerged, as the evidence that the gate blocks.
+**The red gate on GitHub.** The branch [`demo/gate-red`](docs/gate-demo.md) carries a fake `QAFAKE_` token.
+[Pull request #1](https://github.com/BilokinTaras/devsecops-quality-gates/pull/1) opens it against `main`: every
+check passes except the gate, which fails on two High findings for that line. It is closed, unmerged, as the
+evidence that the gate blocks.
 
 Third-party actions are pinned to commit SHAs; `actionlint`, `zizmor` (no medium or high findings) and
 `shellcheck` pass locally.
@@ -190,8 +192,6 @@ the runs whose raw output is in [docs/data/2026-11-01/](docs/data/2026-11-01/).
 
 ## Roadmap & known limitations
 
-- The workflows pass their linters locally but have not run on GitHub yet; the demonstration pull request is
-  opened once the repository is published.
 - ZAP's out-of-band (OAST) checks are off by design: they would send traffic to an external service. SSRF
   is verified by the local canary instead.
 - Nuclei runs a fixed tag selection; a weekly full-template run would catch newly published CVEs.

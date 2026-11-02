@@ -37,7 +37,7 @@ They are written before any testing starts and are part of the review of every c
 - Reports keep only what is needed to reproduce a finding against localhost.
 - JWTs, passwords and personal data in evidence are redacted except crAPI demo values.
 - Nothing from this repository's tests is sent to any external service. Upload of SARIF to GitHub code
-  scanning (phase 2) contains findings about this repository's own code only.
+  scanning contains findings about this repository's own code only.
 
 ## Stop conditions
 
