@@ -4,7 +4,7 @@ A layered security pipeline against **OWASP crAPI** running only on `127.0.0.1`:
 DAST and fifteen API-security regression tests, behind one typed quality gate whose baseline makes every
 accepted risk carry a reason, an owner and an expiry date.
 
-![Python](https://img.shields.io/badge/Python-3.12-3776AB) ![pytest](https://img.shields.io/badge/pytest-9.2-0A9EDC) ![ZAP](https://img.shields.io/badge/ZAP-2.17-00549E) ![Semgrep](https://img.shields.io/badge/Semgrep-1.183-1B2B34) ![Trivy](https://img.shields.io/badge/Trivy-0.76-1904DA) ![mypy](https://img.shields.io/badge/mypy-strict-2A6DB2) ![License: MIT](https://img.shields.io/badge/license-MIT-green)
+[![PR checks](https://github.com/BilokinTaras/devsecops-quality-gates/actions/workflows/pr.yml/badge.svg)](https://github.com/BilokinTaras/devsecops-quality-gates/actions/workflows/pr.yml) [![Nightly security pipeline](https://github.com/BilokinTaras/devsecops-quality-gates/actions/workflows/nightly.yml/badge.svg)](https://github.com/BilokinTaras/devsecops-quality-gates/actions/workflows/nightly.yml) ![Python](https://img.shields.io/badge/Python-3.12-3776AB) ![pytest](https://img.shields.io/badge/pytest-9.2-0A9EDC) ![ZAP](https://img.shields.io/badge/ZAP-2.17-00549E) ![Semgrep](https://img.shields.io/badge/Semgrep-1.183-1B2B34) ![Trivy](https://img.shields.io/badge/Trivy-0.76-1904DA) ![mypy](https://img.shields.io/badge/mypy-strict-2A6DB2) ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
 ## In 30 seconds
 
@@ -24,7 +24,10 @@ accepted risk carry a reason, an owner and an expiry date.
 
 **Nightly pipeline on GitHub Pages:** https://bilokintaras.github.io/devsecops-quality-gates/ — both gate
 verdicts, the regression-test result, the ZAP report, the Trivy-vs-Grype comparison, the PDF assessment and the
-SBOMs (published by [`nightly.yml`](.github/workflows/nightly.yml) once it has run). Findings about this
+SBOMs (published by [`nightly.yml`](.github/workflows/nightly.yml)). Latest scheduled run, 2026-11-03: **28
+regression tests — 10 controls passed, 18 open findings as strict expected failures; code gate PASS (0 findings);
+DAST gate PASS with ZAP and Nuclei as inputs — 0 High/Critical, 11 Medium, 16 Low, none blocking**
+([run 41611498880](https://github.com/BilokinTaras/devsecops-quality-gates/actions/runs/41611498880)). Findings about this
 repository's own code go to GitHub code scanning. In the repository today:
 [security assessment (PDF)](docs/security-assessment-2026-11-01.pdf) ·
 [ZAP report (HTML)](docs/data/2026-11-01/zap-report.html) ·
@@ -198,8 +201,8 @@ the runs whose raw output is in [docs/data/2026-11-01/](docs/data/2026-11-01/).
 - Nuclei runs a fixed tag selection; a weekly full-template run would catch newly published CVEs.
 - The chatbot (LLM) challenges and the React front end are untested.
 - Image SCA is report-only; crAPI's images carry hundreds of known CVEs that nobody here can fix.
-- Verified on Windows 11 x86_64 with Docker Desktop; every image also has `linux/arm64`, but macOS and Linux
-  runs are still pending.
+- Verified on Windows 11 x86_64 with Docker Desktop and on Linux in CI (GitHub-hosted Ubuntu runners); every
+  image also has `linux/arm64`, but a macOS run is still pending.
 
 ## Licence and credits
 
