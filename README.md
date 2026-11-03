@@ -86,7 +86,7 @@ it is allowed only against this stand.
 
 ```bash
 uv sync --frozen --all-groups
-make check                 # ruff, mypy --strict, 79 unit tests of the gate and tools (coverage 98 %)
+make check                 # ruff, mypy --strict, 83 unit tests of the gate and tools (coverage 98 %)
 make stand-up              # crAPI on 127.0.0.1:8888, MailHog on :8025  (~90 s)
 make seed                  # users A and B with vehicles, posts and orders (idempotent)
 make security-tests        # 10 passed, 18 xfailed
@@ -138,7 +138,7 @@ SSRF) and every request passes a client that refuses any address outside the sta
 
 | Workflow | When | What runs |
 |---|---|---|
-| [`pr.yml`](.github/workflows/pr.yml) | every PR and push to `main` | ruff, mypy, the 82 unit tests with the 90 % coverage floor; `actionlint`, `zizmor` and `shellcheck` over the pipeline itself; Gitleaks over the history of the commit under test, Semgrep on our code and Trivy on the repository, all three as SARIF in GitHub code scanning; then the **blocking gate** |
+| [`pr.yml`](.github/workflows/pr.yml) | every PR and push to `main` | ruff, mypy, the 83 unit tests with the 90 % coverage floor; `actionlint`, `zizmor` and `shellcheck` over the pipeline itself; Gitleaks over the history of the commit under test, Semgrep on our code and Trivy on the repository, all three as SARIF in GitHub code scanning; then the **blocking gate** |
 | [`nightly.yml`](.github/workflows/nightly.yml) | daily 02:11 UTC, manual | in parallel: SCA and SBOMs of the six crAPI images plus Semgrep on crAPI's source; and crAPI on `127.0.0.1` in the runner → seed → the 28 regression tests → ZAP and Nuclei → the DAST gate. Then both gates, the PDF and the Pages site |
 
 The stand-dependent work stays in one job because the stand exists only there; everything else runs beside it,
