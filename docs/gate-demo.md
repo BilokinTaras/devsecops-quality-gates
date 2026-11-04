@@ -13,8 +13,10 @@ history can be mistaken for a live credential.
 ## Scope of the normal scan
 
 `scripts/scan-secrets.sh` scans every branch **except** `demo/*`
-(`git log --exclude=refs/heads/demo/* --all`), so the demonstration can stay in the repository without
-keeping the gate permanently red. In CI the job checks out one branch, so the same command scans exactly the
+(`git log --exclude=refs/heads/demo/* --exclude=refs/remotes/*/demo/* --all`), so the demonstration can stay in
+the repository without keeping the gate permanently red. Both forms are needed: in a fresh clone the demo branch
+exists only as `refs/remotes/origin/demo/gate-red`, and with the first form alone `make gate` failed on the fake
+token for anyone following the Quick start (found 2026-11-03, re-running everything from a clean clone). In CI the job checks out one branch, so the same command scans exactly the
 branch being built — including the demo branch when a pull request opens it.
 
 The exclusion needs `--exclude=<glob>` before `--all`. The obvious-looking
